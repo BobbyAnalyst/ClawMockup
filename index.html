@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mergedom — Claw Grab Event</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #2a3a52;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px; min-height: 100vh; color: #fff;
+  }
+
+  h1.page-title { font-size: 26px; font-weight: 900; color: #ffd740; text-shadow: 0 2px 4px rgba(0,0,0,0.3); margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: #a0b8d8; margin-bottom: 24px; }
+
+  .phone {
+    width: 375px; height: 812px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 36px; border: 3px solid #4a3520;
+    overflow: hidden; display: flex; flex-direction: column; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .event-header {
+    height: 56px;
+    background: linear-gradient(180deg, #7b2ff7, #5a1db8);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; flex-shrink: 0;
+    border-bottom: 2px solid #ffc107;
+  }
+  .event-title { font-size: 20px; font-weight: 900; color: #ffd740; text-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 20px rgba(255,215,64,0.3); letter-spacing: 1px; }
+  .event-timer { background: rgba(0,0,0,0.35); border-radius: 12px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: #ff8a80; border: 1px solid rgba(255,138,128,0.3); }
+  .event-timer span { color: #fff; }
+  .close-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.3); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  .machine-area { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+
+  .claw-rail {
+    height: 28px; background: linear-gradient(180deg, #555, #333);
+    border-bottom: 3px solid #777; position: relative; flex-shrink: 0;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.5);
+  }
+  .claw-rail::before, .claw-rail::after { content: ''; position: absolute; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #e53935; box-shadow: 0 0 6px #e53935; }
+  .claw-rail::before { left: 12px; }
+  .claw-rail::after { right: 12px; }
+
+  .claw-container {
+    position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; flex-direction: column; align-items: center;
+    transition: none;
+  }
+  .claw-container.animating { transition: left 0.3s ease-in-out; }
+  .claw-arm { width: 4px; height: 30px; background: linear-gradient(180deg, #888, #aaa); border: 1px solid #666; transition: height 0.45s ease-in-out; }
+  .claw-head { width: 40px; height: 28px; position: relative; }
+  .claw-prong { position: absolute; bottom: 0; width: 4px; height: 18px; background: linear-gradient(180deg, #aaa, #ccc); border-radius: 0 0 2px 2px; transform-origin: top center; transition: transform 0.3s; }
+  .claw-prong.left { left: 6px; transform: rotate(15deg); }
+  .claw-prong.right { right: 6px; transform: rotate(-15deg); }
+  .claw-prong.center { left: 50%; margin-left: -2px; }
+  .claw-head-top { width: 24px; height: 10px; margin: 0 auto; background: linear-gradient(180deg, #999, #bbb); border-radius: 4px 4px 0 0; border: 1px solid #777; }
+  .claw-container.grabbing .claw-prong.left { transform: rotate(5deg); }
+  .claw-container.grabbing .claw-prong.right { transform: rotate(-5deg); }
+  .claw-grabbed-item {
+    position: absolute; bottom: -32px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 40px; display: none; align-items: center; justify-content: center;
+    font-size: 22px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    animation: wobble 0.3s ease-in-out infinite;
+  }
+  .claw-container.has-item .claw-grabbed-item { display: flex; }
+  @keyframes wobble { 0%, 100% { transform: translateX(-50%) rotate(-3deg); } 50% { transform: translateX(-50%) rotate(3deg); } }
+
+  /* ══ GLASS CASE ══ */
+  .glass-case {
+    flex: 1; position: relative; margin: 0 8px;
+    background: linear-gradient(180deg, rgba(100,180,255,0.03), rgba(100,180,255,0.10));
+    border-left: 3px solid rgba(255,255,255,0.08);
+    border-right: 3px solid rgba(255,255,255,0.08);
+    border-bottom: 4px solid #555;
+    overflow: hidden;
+  }
+  .glass-case::before {
+    content: ''; position: absolute; top: 0; left: 6px;
+    width: 30px; height: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent 60%);
+    border-radius: 20px; pointer-events: none; z-index: 10;
+  }
+
+  /* ══ PILE ITEMS ══ */
+  .pile-item {
+    position: absolute; width: 38px; height: 38px;
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; cursor: default;
+    border: 2px solid transparent;
+    transition: opacity 0.3s, transform 0.3s;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .pile-item .pile-label {
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    text-align: center; font-size: 6px; font-weight: 900;
+    color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+    line-height: 1; white-space: nowrap; overflow: hidden;
+  }
+  .pile-item.common { background: linear-gradient(135deg, rgba(120,144,156,0.5), rgba(120,144,156,0.25)); border-color: rgba(120,144,156,0.4); }
+  .pile-item.uncommon { background: linear-gradient(135deg, rgba(76,175,80,0.5), rgba(76,175,80,0.25)); border-color: rgba(76,175,80,0.4); }
+  .pile-item.rare { background: linear-gradient(135deg, rgba(33,150,243,0.55), rgba(33,150,243,0.25)); border-color: rgba(33,150,243,0.5); }
+  .pile-item.epic { background: linear-gradient(135deg, rgba(156,39,176,0.6), rgba(156,39,176,0.25)); border-color: rgba(156,39,176,0.5); box-shadow: 0 0 10px rgba(156,39,176,0.25); }
+  .pile-item.legendary { background: linear-gradient(135deg, rgba(255,193,7,0.6), rgba(255,152,0,0.3)); border-color: rgba(255,193,7,0.5); box-shadow: 0 0 12px rgba(255,193,7,0.3); animation: legendaryPulse 2s ease-in-out infinite; }
+  @keyframes legendaryPulse { 0%, 100% { box-shadow: 0 0 10px rgba(255,193,7,0.25); } 50% { box-shadow: 0 0 18px rgba(255,193,7,0.5); } }
+
+  /* crosshair line */
+  .crosshair {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: rgba(255,215,64,0.3); z-index: 60;
+    pointer-events: none; left: 50%; transform: translateX(-50%);
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .crosshair.visible { opacity: 1; }
+  .crosshair::before {
+    content: '▼'; position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: rgba(255,215,64,0.6);
+  }
+
+  .drag-zone { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: grab; }
+  .drag-zone:active { cursor: grabbing; }
+  .drag-zone.disabled { pointer-events: none; }
+
+  .flash-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,215,64,0.15); z-index: 200; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+  .flash-overlay.active { opacity: 1; }
+
+  /* ══ BOTTOM PANEL ══ */
+  .bottom-panel { flex-shrink: 0; padding: 10px 14px 16px; background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)); border-top: 2px solid rgba(255,255,255,0.08); }
+  .tries-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .tries-label { font-size: 13px; font-weight: 800; color: #c8daf0; }
+  .tries-icons { display: flex; gap: 4px; }
+  .try-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; }
+  .try-dot.free { background: linear-gradient(135deg, #66bb6a, #2e7d32); border: 1.5px solid #81c784; }
+  .try-dot.rv { background: linear-gradient(135deg, #42a5f5, #1565c0); border: 1.5px solid #90caf9; }
+  .try-dot.used { background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.3); }
+
+  .btn-row { display: flex; gap: 8px; }
+  .btn { flex: 1; height: 44px; border-radius: 12px; border: none; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.15s; position: relative; overflow: hidden; }
+  .btn:active { transform: scale(0.96); }
+  .btn-grab { background: linear-gradient(180deg, #ffd740, #f9a825); color: #4a3520; border: 2px solid #c67c00; box-shadow: 0 4px 12px rgba(249,168,37,0.4), inset 0 1px 0 rgba(255,255,255,0.3); font-size: 13px; pointer-events: none; }
+  .btn-grab.disabled { background: linear-gradient(180deg, #666, #444); color: #999; border-color: #555; box-shadow: none; }
+  .btn-rv { background: linear-gradient(180deg, #42a5f5, #1565c0); color: #fff; border: 2px solid #0d47a1; box-shadow: 0 4px 12px rgba(21,101,192,0.3); font-size: 11px; }
+  .btn-rv:hover { background: linear-gradient(180deg, #64b5f6, #1976d2); }
+  .btn-rv.disabled { background: linear-gradient(180deg, #555, #444); color: #888; border-color: #555; box-shadow: none; cursor: not-allowed; }
+
+  .collected-bar { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 8px; background: rgba(0,0,0,0.25); border-radius: 8px; min-height: 36px; flex-wrap: wrap; }
+  .collected-label { font-size: 10px; font-weight: 700; color: #78909c; text-transform: uppercase; letter-spacing: 1px; }
+  .collected-item { width: 26px; height: 26px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 14px; animation: popIn 0.3s ease-out; }
+  @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.3); } 100% { transform: scale(1); opacity: 1; } }
+
+  .oot-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 300; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .oot-overlay.visible { display: flex; }
+  .oot-title { font-size: 22px; font-weight: 900; color: #ffd740; text-shadow: 0 2px 8px rgba(0,0,0,0.5); margin-bottom: 8px; }
+  .oot-sub { font-size: 13px; color: #a0b8d8; margin-bottom: 20px; text-align: center; }
+  .oot-btn { width: 80%; height: 50px; border-radius: 14px; border: none; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .oot-btn.iap-5 { background: linear-gradient(180deg, #e040fb, #9c27b0); color: #fff; border: 2px solid #7b1fa2; box-shadow: 0 4px 16px rgba(156,39,176,0.4); }
+  .oot-btn.iap-10 { background: linear-gradient(180deg, #ffd740, #f9a825); color: #4a3520; border: 2px solid #c67c00; box-shadow: 0 4px 16px rgba(249,168,37,0.4); }
+  .oot-btn.dismiss { background: transparent; color: #78909c; font-size: 12px; box-shadow: none; border: 1px solid rgba(255,255,255,0.1); }
+
+  .annotations { margin-top: 32px; max-width: 500px; text-align: left; }
+  .annotations h2 { font-size: 16px; font-weight: 900; color: #ffd740; margin-bottom: 12px; }
+  .annotations ul { list-style: none; padding: 0; }
+  .annotations li { font-size: 12px; color: #a0b8d8; margin-bottom: 6px; padding-left: 16px; position: relative; }
+  .annotations li::before { content: '▸'; position: absolute; left: 0; color: #ffd740; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">🎪 Claw Grab Event — Mockup</h1>
+<p class="page-subtitle">Mergedom: Time-Limited Monetization Event</p>
+
+<div class="phone">
+  <div class="event-header">
+    <div class="event-title">🏗️ Claw Grab!</div>
+    <div class="event-timer">⏰ <span id="timer">2d 14h 32m</span></div>
+    <div class="close-btn" title="Back to game">✕</div>
+  </div>
+
+  <div class="machine-area">
+    <div class="claw-rail"></div>
+
+    <div class="claw-container" id="claw">
+      <div class="claw-arm" id="clawArm"></div>
+      <div class="claw-head">
+        <div class="claw-head-top"></div>
+        <div class="claw-prong left"></div>
+        <div class="claw-prong center"></div>
+        <div class="claw-prong right"></div>
+      </div>
+      <div class="claw-grabbed-item" id="grabbedItem"></div>
+    </div>
+
+    <div class="drag-zone" id="dragZone"></div>
+    <div class="crosshair" id="crosshair"></div>
+
+    <div class="glass-case" id="glassCase">
+      <!-- Items rendered by JS as absolute-positioned pile -->
+    </div>
+
+    <div class="flash-overlay" id="flash"></div>
+  </div>
+
+  <div class="bottom-panel">
+    <div class="tries-row">
+      <span class="tries-label">🎯 Tries:</span>
+      <div class="tries-icons" id="triesIcons"></div>
+    </div>
+    <div class="btn-row">
+      <div class="btn btn-grab" id="btnGrab">👆 Drag & Release to Grab!</div>
+      <button class="btn btn-rv" id="btnRV" onclick="watchAd()">📺 Watch Ad<br>+1 Try</button>
+    </div>
+    <div class="collected-bar">
+      <span class="collected-label">Won:</span>
+      <div id="collectedItems" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <div class="oot-overlay" id="ootOverlay">
+    <div class="oot-title">Need More Tries?</div>
+    <div class="oot-sub">The best rewards are still waiting!<br>Grab more tries to keep going 🎪</div>
+    <button class="oot-btn iap-5" onclick="buyTries(5)">🎪 5 Tries — $1.99</button>
+    <button class="oot-btn iap-10" onclick="buyTries(10)">⭐ 10 Tries — $2.99</button>
+    <button class="oot-btn dismiss" onclick="dismissOOT()">Maybe Later</button>
+  </div>
+</div>
+
+<div class="annotations">
+  <h2>Claw Grab — Design Notes</h2>
+  <ul>
+    <li><b>Pile layout:</b> Items scattered organically with overlaps — feels like a real claw machine</li>
+    <li><b>Skill element:</b> Position the claw precisely — it grabs the top-most item under the crosshair</li>
+    <li><b>Better rewards buried deeper</b> at the bottom of the pile</li>
+    <li><b>Tries:</b> 1 free/day + 2 RV (+1 each) + IAP bundles (5 or 10)</li>
+    <li><b>No gameplay loop</b> — pure monetization event, time-limited from main menu</li>
+    <li><b>Crosshair line</b> shows exactly where the claw will drop</li>
+  </ul>
+</div>
+
+<script>
+// ══ PILE ITEMS — scattered, overlapping, bottom = best ══
+// Each item gets: emoji, label, rarity, and will be placed with random offsets
+const ITEM_POOL = [
+  // Layer 0 (bottom) — LEGENDARY — buried treasure
+  { emoji: '👑', label: '50 Energy',    rarity: 'legendary', layer: 0 },
+  { emoji: '💎', label: 'Rare Chest',   rarity: 'legendary', layer: 0 },
+  { emoji: '🏆', label: 'Mega Box',     rarity: 'legendary', layer: 0 },
+  { emoji: '🌟', label: 'Star Chest',   rarity: 'legendary', layer: 0 },
+  { emoji: '💰', label: '1000 Coins',   rarity: 'legendary', layer: 0 },
+  // Layer 1 — EPIC
+  { emoji: '⚡', label: '30 Energy',    rarity: 'epic', layer: 1 },
+  { emoji: '📦', label: 'Premium Box',  rarity: 'epic', layer: 1 },
+  { emoji: '⏳', label: '5 Hourglasses',rarity: 'epic', layer: 1 },
+  { emoji: '🎯', label: 'Chain Breaker',rarity: 'epic', layer: 1 },
+  { emoji: '🔮', label: 'Merge Stone',  rarity: 'epic', layer: 1 },
+  { emoji: '🧰', label: 'Tool Chest',   rarity: 'epic', layer: 1 },
+  // Layer 2 — RARE
+  { emoji: '⏳', label: '3 Hourglasses',rarity: 'rare', layer: 2 },
+  { emoji: '🪙', label: '500 Coins',    rarity: 'rare', layer: 2 },
+  { emoji: '📦', label: 'Container',    rarity: 'rare', layer: 2 },
+  { emoji: '⚡', label: '15 Energy',    rarity: 'rare', layer: 2 },
+  { emoji: '🎁', label: 'Gift Box',     rarity: 'rare', layer: 2 },
+  { emoji: '🧰', label: 'Small Chest',  rarity: 'rare', layer: 2 },
+  { emoji: '🪙', label: '300 Coins',    rarity: 'rare', layer: 2 },
+  // Layer 3 — UNCOMMON
+  { emoji: '⚡', label: '10 Energy',    rarity: 'uncommon', layer: 3 },
+  { emoji: '🪙', label: '200 Coins',    rarity: 'uncommon', layer: 3 },
+  { emoji: '⏳', label: '1 Hourglass',  rarity: 'uncommon', layer: 3 },
+  { emoji: '🎁', label: 'Gift',         rarity: 'uncommon', layer: 3 },
+  { emoji: '⚡', label: '8 Energy',     rarity: 'uncommon', layer: 3 },
+  { emoji: '🪙', label: '150 Coins',    rarity: 'uncommon', layer: 3 },
+  // Layer 4 (top) — COMMON — easy pickings
+  { emoji: '⚡', label: '5 Energy',     rarity: 'common', layer: 4 },
+  { emoji: '🪙', label: '50 Coins',     rarity: 'common', layer: 4 },
+  { emoji: '⚡', label: '3 Energy',     rarity: 'common', layer: 4 },
+  { emoji: '🪙', label: '25 Coins',     rarity: 'common', layer: 4 },
+  { emoji: '⚡', label: '5 Energy',     rarity: 'common', layer: 4 },
+  { emoji: '🪙', label: '30 Coins',     rarity: 'common', layer: 4 },
+  { emoji: '⚡', label: '4 Energy',     rarity: 'common', layer: 4 },
+  { emoji: '🪙', label: '40 Coins',     rarity: 'common', layer: 4 },
+];
+
+// State
+let items = []; // { ...itemData, x, y, rot, id, el }
+let tries = 3;
+let maxTries = 3;
+let rvUsed = 0;
+let maxRV = 2;
+let freeUsed = false;
+let isAnimating = false;
+let isDragging = false;
+let collected = [];
+let nextId = 0;
+
+const ITEM_SIZE = 38;
+const claw = document.getElementById('claw');
+const clawArm = document.getElementById('clawArm');
+const grabbedItem = document.getElementById('grabbedItem');
+const flash = document.getElementById('flash');
+const dragZone = document.getElementById('dragZone');
+const crosshair = document.getElementById('crosshair');
+const glassCase = document.getElementById('glassCase');
+const machineArea = document.querySelector('.machine-area');
+
+// ══ SEED RNG for consistent layout ══
+let seed = 42;
+function seededRandom() {
+  seed = (seed * 16807) % 2147483647;
+  return (seed - 1) / 2147483646;
+}
+
+// ══ BUILD PILE ══
+function buildPile() {
+  const W = glassCase.clientWidth;
+  const H = glassCase.clientHeight;
+
+  // Sort by layer (high layer = top of pile = rendered last = higher z)
+  const sorted = [...ITEM_POOL].sort((a, b) => a.layer - b.layer);
+
+  // Items cascade down the full height of the case:
+  //   - Common (layer 4) scattered loosely near the top ~20-40% zone
+  //   - Legendary (layer 0) clustered at the very bottom ~80-100% zone
+  //   - Middle layers spread in between with increasing density toward bottom
+  // The X spread narrows slightly toward the bottom (funnel shape)
+  const layerCount = 5;
+
+  items = [];
+  seed = 42;
+
+  sorted.forEach((data) => {
+    const layer = data.layer;
+
+    // Y: everything in bottom 45% of case
+    // layer 4 (common) at ~55-65%, layer 0 (legendary) at ~88-98%
+    const bandTop = 0.55 + (4 - layer) * 0.08;    // layer4=0.55, layer3=0.63, layer2=0.71, layer1=0.79, layer0=0.87
+    const bandBottom = bandTop + 0.11;              // tight 11% bands, heavily overlapping
+    const yNorm = bandTop + seededRandom() * (bandBottom - bandTop);
+    const y = Math.max(4, Math.min(H - ITEM_SIZE - 4, yNorm * H));
+
+    // X: normal distribution — most items near center, some reaching edges
+    // Box-Muller transform for gaussian random
+    const u1 = Math.max(0.0001, seededRandom());
+    const u2 = seededRandom();
+    const gaussian = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    // Clamp to ±2.5 std devs, map to full width
+    const clamped = Math.max(-2.5, Math.min(2.5, gaussian));
+    const spreadW = W * 0.65; // wide spread — items reach the edges
+    const centerX = W / 2 + (seededRandom() - 0.5) * W * 0.08;
+    const x = Math.max(3, Math.min(W - ITEM_SIZE - 3,
+      centerX + clamped * spreadW / 2.5
+    ));
+
+    // Wild angles — tilted all over
+    const rot = (seededRandom() - 0.5) * 80; // -40 to +40 degrees
+
+    items.push({ ...data, x, y, rot, id: nextId++ });
+  });
+}
+
+// ══ RENDER PILE ══
+function renderPile() {
+  glassCase.innerHTML = '';
+
+  // Sort by y descending (bottom items render first = behind)
+  const sorted = [...items].sort((a, b) => a.y - b.y);
+
+  sorted.forEach((item, renderIdx) => {
+    const el = document.createElement('div');
+    el.className = `pile-item ${item.rarity}`;
+    el.style.left = item.x + 'px';
+    el.style.top = item.y + 'px';
+    el.style.zIndex = renderIdx + 1;
+    el.style.transform = `rotate(${item.rot}deg)`;
+    el.innerHTML = `${item.emoji}<span class="pile-label">${item.label}</span>`;
+    el.dataset.itemId = item.id;
+    glassCase.appendChild(el);
+    item.el = el;
+  });
+}
+
+// ══ FIND TOP ITEM AT X POSITION ══
+// Returns the item with highest z (top of pile) whose X range overlaps with clawX
+function findItemAtX(clawX) {
+  const caseRect = glassCase.getBoundingClientRect();
+  const machineRect = machineArea.getBoundingClientRect();
+  const relX = clawX - (caseRect.left - machineRect.left);
+
+  // Grab radius — how wide the claw reaches
+  const grabRadius = 20;
+
+  // Find all items whose horizontal center is within grab radius of clawX
+  const candidates = items.filter(item => {
+    const itemCenterX = item.x + ITEM_SIZE / 2;
+    return Math.abs(itemCenterX - relX) < grabRadius;
+  });
+
+  if (candidates.length === 0) return null;
+
+  // Return the one with the lowest y (visually highest = top of pile, since y increases downward...
+  // but layer 4 = top = lowest y values)
+  // Actually we want the item rendered on top = highest renderIdx = sorted by y, last
+  // In our pile, higher layer items have lower y but we want to grab the one that is visually on top
+  // The one visually on top is the one with the highest z-index in rendering
+  // Since we sort by y ascending for rendering, items with HIGHER y have higher z-index
+  // But top-of-pile items have LOWER y...
+  // Let's just use layer: highest layer = on top
+  candidates.sort((a, b) => b.layer - a.layer || a.y - b.y);
+  return candidates[0];
+}
+
+// ══ RENDER TRIES ══
+function renderTries() {
+  const container = document.getElementById('triesIcons');
+  container.innerHTML = '';
+  for (let i = 0; i < maxTries; i++) {
+    const dot = document.createElement('div');
+    if (i < tries) {
+      dot.className = i === 0 && !freeUsed ? 'try-dot free' : 'try-dot rv';
+      dot.textContent = '▶';
+    } else {
+      dot.className = 'try-dot used';
+      dot.textContent = '·';
+    }
+    container.appendChild(dot);
+  }
+
+  const btnGrab = document.getElementById('btnGrab');
+  if (tries <= 0) {
+    btnGrab.classList.add('disabled');
+    btnGrab.textContent = '🚫 No Tries Left';
+    dragZone.classList.add('disabled');
+  } else {
+    btnGrab.classList.remove('disabled');
+    btnGrab.textContent = '👆 Drag & Release to Grab!';
+    dragZone.classList.remove('disabled');
+  }
+
+  const btnRV = document.getElementById('btnRV');
+  if (rvUsed >= maxRV) {
+    btnRV.classList.add('disabled');
+    btnRV.innerHTML = '📺 No Ads Left';
+  }
+}
+
+// ══ DRAG HANDLERS ══
+function onDragStart(e) {
+  if (isAnimating || tries <= 0) return;
+  e.preventDefault();
+  isDragging = true;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  moveClaw(clientX);
+  crosshair.classList.add('visible');
+}
+
+function onDragMove(e) {
+  if (!isDragging || isAnimating) return;
+  e.preventDefault();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  moveClaw(clientX);
+}
+
+function moveClaw(clientX) {
+  const machineRect = machineArea.getBoundingClientRect();
+  const minX = 28; const maxX = machineRect.width - 28;
+  let clawX = clientX - machineRect.left;
+  clawX = Math.max(minX, Math.min(maxX, clawX));
+  claw.style.left = clawX + 'px';
+  crosshair.style.left = clawX + 'px';
+}
+
+function onDragEnd(e) {
+  if (!isDragging || isAnimating) return;
+  isDragging = false;
+  crosshair.classList.remove('visible');
+
+  const machineRect = machineArea.getBoundingClientRect();
+  const clawX = parseFloat(claw.style.left) || machineRect.width / 2;
+
+  if (tries > 0) {
+    dropClaw(clawX);
+  }
+}
+
+dragZone.addEventListener('mousedown', onDragStart);
+dragZone.addEventListener('touchstart', onDragStart, { passive: false });
+window.addEventListener('mousemove', onDragMove);
+window.addEventListener('touchmove', onDragMove, { passive: false });
+window.addEventListener('mouseup', onDragEnd);
+window.addEventListener('touchend', onDragEnd);
+
+// ══ DROP & GRAB ══
+async function dropClaw(clawX) {
+  isAnimating = true;
+  tries--;
+  if (!freeUsed) freeUsed = true;
+  renderTries();
+
+  const target = findItemAtX(clawX);
+
+  // Snap claw to exact position
+  claw.classList.add('animating');
+  await sleep(100);
+
+  if (!target) {
+    // Miss — drop and retract
+    clawArm.style.height = '200px';
+    await sleep(450);
+    claw.classList.add('grabbing');
+    await sleep(250);
+    clawArm.style.height = '30px';
+    claw.classList.remove('grabbing', 'animating');
+    await sleep(350);
+    isAnimating = false;
+    checkOutOfTries();
+    return;
+  }
+
+  // Calculate drop distance to the target item
+  const caseRect = glassCase.getBoundingClientRect();
+  const machineRect = machineArea.getBoundingClientRect();
+  const targetY = caseRect.top - machineRect.top + target.y + ITEM_SIZE / 2;
+  const clawBottom = 28 + 30 + 28; // rail + arm default + head
+  const dropDist = targetY - clawBottom + 15;
+
+  clawArm.style.height = Math.max(30, Math.min(dropDist, 380)) + 'px';
+  await sleep(500);
+
+  // Grab
+  claw.classList.add('grabbing');
+  await sleep(280);
+
+  // Pick up item
+  grabbedItem.textContent = target.emoji;
+  claw.classList.add('has-item');
+
+  // Remove from pile with fade
+  if (target.el) {
+    target.el.style.opacity = '0';
+    target.el.style.transform = `rotate(${target.rot}deg) scale(0.5)`;
+  }
+  items = items.filter(i => i.id !== target.id);
+
+  // Retract
+  clawArm.style.height = '30px';
+  await sleep(500);
+
+  // Flash + collect
+  flash.classList.add('active');
+  await sleep(180);
+  flash.classList.remove('active');
+
+  collected.push(target);
+  renderCollected();
+
+  // Reset claw
+  claw.classList.remove('grabbing', 'has-item', 'animating');
+  grabbedItem.textContent = '';
+  await sleep(150);
+
+  // Re-render pile (removes faded item)
+  renderPile();
+  isAnimating = false;
+  checkOutOfTries();
+}
+
+function checkOutOfTries() {
+  if (tries <= 0 && rvUsed >= maxRV) {
+    setTimeout(() => {
+      document.getElementById('ootOverlay').classList.add('visible');
+    }, 400);
+  }
+}
+
+// ══ WATCH AD / BUY / DISMISS ══
+function watchAd() {
+  if (rvUsed >= maxRV || isAnimating) return;
+  rvUsed++;
+  tries++;
+  maxTries++;
+  renderTries();
+}
+function buyTries(count) {
+  tries += count;
+  maxTries += count;
+  document.getElementById('ootOverlay').classList.remove('visible');
+  renderTries();
+}
+function dismissOOT() {
+  document.getElementById('ootOverlay').classList.remove('visible');
+}
+
+// ══ RENDER COLLECTED ══
+function renderCollected() {
+  const container = document.getElementById('collectedItems');
+  container.innerHTML = '';
+  collected.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'collected-item';
+    el.textContent = item.emoji;
+    el.title = item.label;
+    container.appendChild(el);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══ INIT ══
+// Small delay to ensure layout is computed
+requestAnimationFrame(() => {
+  buildPile();
+  renderPile();
+  renderTries();
+});
+</script>
+</body>
+</html>
