@@ -36,7 +36,9 @@
   .event-title { font-size: 20px; font-weight: 900; color: #ffd740; text-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 20px rgba(255,215,64,0.3); letter-spacing: 1px; }
   .event-timer { background: rgba(0,0,0,0.35); border-radius: 12px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: #ff8a80; border: 1px solid rgba(255,138,128,0.3); }
   .event-timer span { color: #fff; }
-  .close-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.3); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .close-btn, .info-btn { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.3); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .info-btn { font-weight: 900; font-style: italic; font-family: Georgia, serif; font-size: 16px; }
+  .header-right { display: flex; gap: 6px; align-items: center; }
 
   .machine-area { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 
@@ -55,7 +57,7 @@
     transition: none;
   }
   .claw-container.animating { transition: left 0.3s ease-in-out; }
-  .claw-arm { width: 4px; height: 30px; background: linear-gradient(180deg, #888, #aaa); border: 1px solid #666; transition: height 0.45s ease-in-out; }
+  .claw-arm { width: 4px; height: 30px; background: linear-gradient(180deg, #888, #aaa); border: 1px solid #666; transition: height 0.8s ease-in-out; }
   .claw-head { width: 40px; height: 28px; position: relative; }
   .claw-prong { position: absolute; bottom: 0; width: 4px; height: 18px; background: linear-gradient(180deg, #aaa, #ccc); border-radius: 0 0 2px 2px; transform-origin: top center; transition: transform 0.3s; }
   .claw-prong.left { left: 6px; transform: rotate(15deg); }
@@ -164,6 +166,14 @@
   .oot-btn.iap-10 { background: linear-gradient(180deg, #ffd740, #f9a825); color: #4a3520; border: 2px solid #c67c00; box-shadow: 0 4px 16px rgba(249,168,37,0.4); }
   .oot-btn.dismiss { background: transparent; color: #78909c; font-size: 12px; box-shadow: none; border: 1px solid rgba(255,255,255,0.1); }
 
+  .info-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 400; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 28px; }
+  .info-overlay.visible { display: flex; }
+  .info-card { background: linear-gradient(180deg, #1e2d45, #162038); border-radius: 18px; border: 2px solid rgba(255,215,64,0.3); padding: 24px 20px; max-width: 300px; text-align: left; }
+  .info-card h3 { font-size: 18px; font-weight: 900; color: #ffd740; margin-bottom: 14px; text-align: center; }
+  .info-card p { font-size: 12px; color: #c8daf0; margin-bottom: 10px; line-height: 1.5; }
+  .info-card p b { color: #ffd740; }
+  .info-close { margin-top: 10px; width: 100%; height: 40px; border-radius: 10px; border: none; background: linear-gradient(180deg, #ffd740, #f9a825); color: #4a3520; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 14px; cursor: pointer; }
+
   .annotations { margin-top: 32px; max-width: 500px; text-align: left; }
   .annotations h2 { font-size: 16px; font-weight: 900; color: #ffd740; margin-bottom: 12px; }
   .annotations ul { list-style: none; padding: 0; }
@@ -179,8 +189,11 @@
 <div class="phone">
   <div class="event-header">
     <div class="event-title">🏗️ Claw Grab!</div>
-    <div class="event-timer">⏰ <span id="timer">2d 14h 32m</span></div>
-    <div class="close-btn" title="Back to game">✕</div>
+    <div class="event-timer">⏰ <span id="timer">14h 39m</span></div>
+    <div class="header-right">
+      <div class="info-btn" title="How to play" onclick="toggleInfo()">i</div>
+      <div class="close-btn" title="Back to game">✕</div>
+    </div>
   </div>
 
   <div class="machine-area">
@@ -209,11 +222,10 @@
 
   <div class="bottom-panel">
     <div class="tries-row">
-      <span class="tries-label">🎯 Tries:</span>
-      <div class="tries-icons" id="triesIcons"></div>
+      <span class="tries-label">🎯 Tries remaining: <span id="triesCount">3</span></span>
     </div>
     <div class="btn-row">
-      <div class="btn btn-grab" id="btnGrab">👆 Drag & Release to Grab!</div>
+      <div class="btn btn-grab" id="btnGrab">Try one more time</div>
       <button class="btn btn-rv" id="btnRV" onclick="watchAd()">📺 Watch Ad<br>+1 Try</button>
     </div>
     <div class="collected-bar">
@@ -228,6 +240,17 @@
     <button class="oot-btn iap-5" onclick="buyTries(5)">🎪 5 Tries — $1.99</button>
     <button class="oot-btn iap-10" onclick="buyTries(10)">⭐ 10 Tries — $2.99</button>
     <button class="oot-btn dismiss" onclick="dismissOOT()">Maybe Later</button>
+  </div>
+
+  <div class="info-overlay" id="infoOverlay">
+    <div class="info-card">
+      <h3>How to Play</h3>
+      <p><b>Drag</b> left or right to position the claw over the item you want.</p>
+      <p><b>Release</b> to drop the claw — it grabs the top item under the crosshair.</p>
+      <p><b>Better rewards</b> are buried deeper in the pile. Common items sit on top, legendaries hide at the bottom!</p>
+      <p><b>Tries:</b> You start with 3 free tries. Watch ads or purchase bundles for more.</p>
+      <button class="info-close" onclick="toggleInfo()">Got it!</button>
+    </div>
   </div>
 </div>
 
@@ -320,47 +343,63 @@ function buildPile() {
   const W = glassCase.clientWidth;
   const H = glassCase.clientHeight;
 
-  // Sort by layer (high layer = top of pile = rendered last = higher z)
+  // Sort by layer ascending — layer 0 (legendary) placed first at bottom
   const sorted = [...ITEM_POOL].sort((a, b) => a.layer - b.layer);
-
-  // Items cascade down the full height of the case:
-  //   - Common (layer 4) scattered loosely near the top ~20-40% zone
-  //   - Legendary (layer 0) clustered at the very bottom ~80-100% zone
-  //   - Middle layers spread in between with increasing density toward bottom
-  // The X spread narrows slightly toward the bottom (funnel shape)
-  const layerCount = 5;
 
   items = [];
   seed = 42;
 
-  sorted.forEach((data) => {
-    const layer = data.layer;
+  // Build a gravity-settled pile from the bottom up using row-based packing.
+  // Items sit on the floor or on top of other items, like a real claw machine.
+  const pad = 6;
+  const itemSpacingX = ITEM_SIZE * 0.78;  // horizontal spacing between items
+  const rowH = ITEM_SIZE * 0.65;          // vertical spacing — cozy overlap
+  const usableW = W - pad * 2;
 
-    // Y: everything in bottom 45% of case
-    // layer 4 (common) at ~55-65%, layer 0 (legendary) at ~88-98%
-    const bandTop = 0.55 + (4 - layer) * 0.08;    // layer4=0.55, layer3=0.63, layer2=0.71, layer1=0.79, layer0=0.87
-    const bandBottom = bandTop + 0.11;              // tight 11% bands, heavily overlapping
-    const yNorm = bandTop + seededRandom() * (bandBottom - bandTop);
-    const y = Math.max(4, Math.min(H - ITEM_SIZE - 4, yNorm * H));
+  // Floor Y = bottom of the glass case
+  const floorY = H - ITEM_SIZE - pad;
 
-    // X: normal distribution — most items near center, some reaching edges
-    // Box-Muller transform for gaussian random
-    const u1 = Math.max(0.0001, seededRandom());
-    const u2 = seededRandom();
-    const gaussian = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    // Clamp to ±2.5 std devs, map to full width
-    const clamped = Math.max(-2.5, Math.min(2.5, gaussian));
-    const spreadW = W * 0.65; // wide spread — items reach the edges
-    const centerX = W / 2 + (seededRandom() - 0.5) * W * 0.08;
-    const x = Math.max(3, Math.min(W - ITEM_SIZE - 3,
-      centerX + clamped * spreadW / 2.5
-    ));
+  // Max items that fit in widest row
+  const maxPerRow = Math.floor(usableW / itemSpacingX);
 
-    // Wild angles — tilted all over
-    const rot = (seededRandom() - 0.5) * 80; // -40 to +40 degrees
+  // Layer 0 = bottom rows (legendary), Layer 4 = top rows (common)
+  // Use fewer items per row so pile grows taller
+  let row = 0;
+  let placed = 0;
+  const total = sorted.length;
 
-    items.push({ ...data, x, y, rot, id: nextId++ });
-  });
+  while (placed < total) {
+    // ~6 items per bottom row, narrowing to ~4 at top for pyramid shape
+    const rowCapacity = Math.max(3, Math.min(6, maxPerRow - row));
+    const count = Math.min(rowCapacity, total - placed);
+
+    const y = floorY - row * rowH;
+    // Brick-like stagger on odd rows
+    const stagger = (row % 2 === 1) ? (itemSpacingX * 0.45) : 0;
+    // Center the row within the case
+    const totalRowW = (count - 1) * itemSpacingX + ITEM_SIZE;
+    const startX = (W - totalRowW) / 2 + stagger * 0.5;
+
+    for (let i = 0; i < count; i++) {
+      const data = sorted[placed + i];
+
+      // Organic jitter — small enough to keep structure, big enough to look natural
+      const jitterX = (seededRandom() - 0.5) * 12;
+      const jitterY = (seededRandom() - 0.5) * 8;
+      const x = Math.max(pad, Math.min(W - ITEM_SIZE - pad,
+        startX + i * itemSpacingX + jitterX
+      ));
+      const finalY = Math.max(4, Math.min(H - ITEM_SIZE - 2, y + jitterY));
+
+      // Gentle tilt — real claw machine items lean slightly
+      const rot = (seededRandom() - 0.5) * 30; // ±15 degrees
+
+      items.push({ ...data, x, y: finalY, rot, id: nextId++ });
+    }
+
+    placed += count;
+    row++;
+  }
 }
 
 // ══ RENDER PILE ══
@@ -416,28 +455,16 @@ function findItemAtX(clawX) {
 
 // ══ RENDER TRIES ══
 function renderTries() {
-  const container = document.getElementById('triesIcons');
-  container.innerHTML = '';
-  for (let i = 0; i < maxTries; i++) {
-    const dot = document.createElement('div');
-    if (i < tries) {
-      dot.className = i === 0 && !freeUsed ? 'try-dot free' : 'try-dot rv';
-      dot.textContent = '▶';
-    } else {
-      dot.className = 'try-dot used';
-      dot.textContent = '·';
-    }
-    container.appendChild(dot);
-  }
+  document.getElementById('triesCount').textContent = tries;
 
   const btnGrab = document.getElementById('btnGrab');
   if (tries <= 0) {
     btnGrab.classList.add('disabled');
-    btnGrab.textContent = '🚫 No Tries Left';
+    btnGrab.textContent = 'No Tries Left';
     dragZone.classList.add('disabled');
   } else {
     btnGrab.classList.remove('disabled');
-    btnGrab.textContent = '👆 Drag & Release to Grab!';
+    btnGrab.textContent = 'Try one more time';
     dragZone.classList.remove('disabled');
   }
 
@@ -508,8 +535,12 @@ async function dropClaw(clawX) {
   await sleep(100);
 
   if (!target) {
-    // Miss — drop and retract
-    clawArm.style.height = '200px';
+    // Miss — drop toward the pile area and retract
+    const caseRect = glassCase.getBoundingClientRect();
+    const machineRect = machineArea.getBoundingClientRect();
+    const missDropY = caseRect.top - machineRect.top + caseRect.height * 0.6;
+    const missClawBottom = 28 + 30 + 28;
+    clawArm.style.height = Math.max(30, missDropY - missClawBottom) + 'px';
     await sleep(450);
     claw.classList.add('grabbing');
     await sleep(250);
@@ -521,15 +552,15 @@ async function dropClaw(clawX) {
     return;
   }
 
-  // Calculate drop distance to the target item
+  // Calculate drop distance — claw arm extends all the way to the target item
   const caseRect = glassCase.getBoundingClientRect();
   const machineRect = machineArea.getBoundingClientRect();
   const targetY = caseRect.top - machineRect.top + target.y + ITEM_SIZE / 2;
-  const clawBottom = 28 + 30 + 28; // rail + arm default + head
+  const clawBottom = 28 + 30 + 28; // rail + default arm + head
   const dropDist = targetY - clawBottom + 15;
 
-  clawArm.style.height = Math.max(30, Math.min(dropDist, 380)) + 'px';
-  await sleep(500);
+  clawArm.style.height = Math.max(30, dropDist) + 'px';
+  await sleep(850);
 
   // Grab
   claw.classList.add('grabbing');
@@ -593,6 +624,9 @@ function buyTries(count) {
 }
 function dismissOOT() {
   document.getElementById('ootOverlay').classList.remove('visible');
+}
+function toggleInfo() {
+  document.getElementById('infoOverlay').classList.toggle('visible');
 }
 
 // ══ RENDER COLLECTED ══
