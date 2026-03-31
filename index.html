@@ -535,32 +535,41 @@ async function dropClaw(clawX) {
   await sleep(100);
 
   if (!target) {
-    // Miss — drop toward the pile area and retract
+    // Miss — still drop all the way to the bottom of the case
     const caseRect = glassCase.getBoundingClientRect();
     const machineRect = machineArea.getBoundingClientRect();
-    const missDropY = caseRect.top - machineRect.top + caseRect.height * 0.6;
-    const missClawBottom = 28 + 30 + 28;
-    clawArm.style.height = Math.max(30, missDropY - missClawBottom) + 'px';
-    await sleep(450);
+    const floorY = caseRect.top - machineRect.top + caseRect.height - 10;
+    const missArm = floorY - 56;
+    clawArm.style.height = Math.max(30, missArm) + 'px';
+    const missTime = Math.max(500, Math.min(1200, missArm * 2));
+    await sleep(missTime);
     claw.classList.add('grabbing');
-    await sleep(250);
+    await sleep(300);
     clawArm.style.height = '30px';
+    await sleep(800);
     claw.classList.remove('grabbing', 'animating');
-    await sleep(350);
+    await sleep(200);
     isAnimating = false;
     checkOutOfTries();
     return;
   }
 
-  // Calculate drop distance — claw arm extends all the way to the target item
+  // Calculate arm length so prong tips reach the target item center.
+  // Claw structure (top to bottom):
+  //   rail (28px) → claw-container starts at top:28px
+  //   arm (variable) → extends downward
+  //   head (28px) → contains prongs whose tips are the grab point
+  // So grab point Y = 28 (rail) + armHeight + 28 (head with prongs)
+  // We want: 28 + armHeight + 28 = targetY  →  armHeight = targetY - 56
   const caseRect = glassCase.getBoundingClientRect();
   const machineRect = machineArea.getBoundingClientRect();
   const targetY = caseRect.top - machineRect.top + target.y + ITEM_SIZE / 2;
-  const clawBottom = 28 + 30 + 28; // rail + default arm + head
-  const dropDist = targetY - clawBottom + 15;
+  const armNeeded = targetY - 56;
 
-  clawArm.style.height = Math.max(30, dropDist) + 'px';
-  await sleep(850);
+  clawArm.style.height = Math.max(30, armNeeded) + 'px';
+  // Scale animation time to distance
+  const dropTime = Math.max(500, Math.min(1200, armNeeded * 2));
+  await sleep(dropTime);
 
   // Grab
   claw.classList.add('grabbing');
@@ -579,7 +588,7 @@ async function dropClaw(clawX) {
 
   // Retract
   clawArm.style.height = '30px';
-  await sleep(500);
+  await sleep(Math.max(500, dropTime));
 
   // Flash + collect
   flash.classList.add('active');
